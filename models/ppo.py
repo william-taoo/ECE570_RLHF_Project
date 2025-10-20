@@ -22,7 +22,6 @@ class ActorCritic(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
-            nn.Softmax(dim=-1)
         )
 
         # Critic network
@@ -34,31 +33,34 @@ class ActorCritic(nn.Module):
 
     def forward(self, state):
         base = self.shared(state)
-        action_probs = self.actor(base)
+        action_logits = self.actor(base)
         state_value = self.critic(base)
-        return action_probs, state_value 
+        return action_logits, state_value 
     
 class PPO:
     def __init__(
         self,
         state_dim,
         action_dim,
+        hidden_dim,
         clip_ratio,
         lr,
-        gamme,
+        gamma,
         lam
     ):
-        self.policy = ActorCritic(state_dim, action_dim, hidden_dim=64)
+        self.policy = ActorCritic(state_dim, action_dim, hidden_dim)
         self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
         self.clip_ratio = clip_ratio
-        self.gamma = gamme
+        self.gamma = gamma
         self.lam = lam
 
     # Choose an action given a state
     def select_action(self, state):
         state = torch.FloatTensor(state).unsqueeze(0)
-        probs, _ = self.policy(state)
-        dist = torch.distributions.Categorical(probs)
+        logits, _ = self.policy(state)
+        # guard against NaNs/Infs in logits
+        logits = torch.nan_to_num(logits, nan=0.0, posinf=1e6, neginf=-1e6)
+        dist = torch.distributions.Categorical(logits=logits)
         action = dist.sample()
         return action.item(), dist.log_prob(action).item()
     
@@ -97,19 +99,31 @@ class PPO:
                 returns_batch = returns[batch_index]
                 advantages_batch = advantages[batch_index]
 
-                # Forward pass
-                probs, values = self.policy(state_batch)
-                dist = torch.distributions.Categorical(probs)
+                # Normalize for stability
+                advantages_batch = (advantages_batch - advantages_batch.mean()) / (advantages_batch.std() + 1e-8)
+
+                # Forward pass (use logits for numeric stability)
+                logits, values = self.policy(state_batch)
+
+                # Replace any NaN/Inf logits with large finite numbers
+                logits = torch.nan_to_num(logits, nan=0.0, posinf=1e6, neginf=-1e6)
+                dist = torch.distributions.Categorical(logits=logits)
                 new_log_probs = dist.log_prob(action_batch)
 
                 ratio = torch.exp(new_log_probs - old_log_prob_batch)
                 clipped = torch.clamp(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio) * advantages_batch
                 loss_policy = -(torch.min(ratio * advantages_batch, clipped)).mean()
                 loss_value = (returns_batch - values.squeeze()).pow(2).mean()
-                loss = loss_policy + 0.5 * loss_value
 
-                self.opitimizer.zero_grad()
+                entropy_bonus = 0.005 * dist.entropy().mean()
+                loss = loss_policy + 0.5 * loss_value - entropy_bonus
+
+                self.optimizer.zero_grad()
                 loss.backward()
+
+                # Clip gradient
+                torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
+
                 self.optimizer.step()
 
 

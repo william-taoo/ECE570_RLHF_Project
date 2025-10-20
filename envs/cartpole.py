@@ -5,7 +5,7 @@ class CartPoleEnv:
     '''
     A wrapper for the CartPole-v1 environment
     '''
-    def __init__(self, render_mode=None):
+    def __init__(self, render_mode):
         self.env = gym.make("CartPole-v1", render_mode=render_mode)
 
     def reset(self):
