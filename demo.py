@@ -95,7 +95,7 @@ def run_rlhf_ppo_demo():
 if __name__ == "__main__":
     hidden_dim = 128
     num_episodes = 150
-    clip_ratio = 0.120
+    clip_ratio = 0.12
     lr = 0.0008
     gamma = 0.99
     lam = 0.95

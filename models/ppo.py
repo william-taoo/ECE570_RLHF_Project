@@ -43,10 +43,10 @@ class PPO:
         state_dim,
         action_dim,
         hidden_dim,
-        clip_ratio,
+        clip_ratio, # How much to constrain policy updates
         lr,
-        gamma,
-        lam
+        gamma, # Discount factor for rewards
+        lam # GAE
     ):
         self.policy = ActorCritic(state_dim, action_dim, hidden_dim)
         self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
@@ -56,9 +56,10 @@ class PPO:
 
     # Choose an action given a state
     def select_action(self, state):
-        state = torch.FloatTensor(state).unsqueeze(0)
+        state = torch.FloatTensor(state).unsqueeze(0) # Make tensor and add dimension [1, state_dim]
         logits, _ = self.policy(state)
-        # guard against NaNs/Infs in logits
+        
+        # Guard against NaNs/Infs in logits
         logits = torch.nan_to_num(logits, nan=0.0, posinf=1e6, neginf=-1e6)
         dist = torch.distributions.Categorical(logits=logits)
         action = dist.sample()
@@ -125,5 +126,3 @@ class PPO:
                 torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
 
                 self.optimizer.step()
-
-
