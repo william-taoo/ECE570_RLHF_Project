@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import random
+import gymnasium as gym
 from collections import deque, namedtuple
 
 SEGMENT_LENGTH = 20 # Length of trajectory segment
@@ -10,7 +11,7 @@ PREF_PAIRS = 2000 # Number of preference pairs used to train
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class RewardModel(nn.Module):
-    def __init__(self, observation_dim, segment_len):
+    def __init__(self, observation_dim, segment_len=SEGMENT_LENGTH):
         super(RewardModel, self).__init__()
         self.fc = nn.Sequential(
             nn.Linear(observation_dim * segment_len, 256),
@@ -26,25 +27,32 @@ class RewardModel(nn.Module):
         return self.fc(x).squeeze(-1) # Return shape (B,)
 
 # Wrapper env that replaces env reward with learned reward model
-class LearnedRewardWrapper:
+class LearnedRewardWrapper(gym.Wrapper):
     def __init__(self, env, reward_model, segment_len=SEGMENT_LENGTH):
-        super(LearnedRewardWrapper, self).__init__()
+        super(LearnedRewardWrapper, self).__init__(env)
         self.model = reward_model
         self.seg_len = segment_len
         self.observation_buffer = deque(maxlen=segment_len)
         self.r_mean = 0.0
         self.r_var = 1.0
         self.count = 1e-4
+        
+    def reset(self, seed=None, options=None):
+        self.observation_buffer.clear()
+        obs, info = self.env.reset(seed=seed, options=options)
+        self.observation_buffer.append(obs)
+        return obs, info
 
     def step(self, action):
-        observation, _, done, info = self.env.step(action)
+        observation, _, terminated, truncated, info = self.env.step(action)
+        done = terminated or truncated
         self.observation_buffer.append(observation)
 
         # Create segment
         segment = list(self.observation_buffer)
         if len(segment) < self.seg_len:
             segment = [segment[-1]] * (self.seg_len - len(segment)) + segment
-        segment_arr = np.aarray(segment, dtype=np.float32)[None,...] # (1, L, D)
+        segment_arr = np.array(segment, dtype=np.float32)[None,...] # (1, L, D)
 
         with torch.no_grad():
             t = torch.tensor(segment_arr, device=device)
@@ -60,16 +68,10 @@ class LearnedRewardWrapper:
             std = 1.0
 
         r_norm = (r - self.r_mean) / std
-        return observation, float(r_norm), done, info
-    
-    def reset(self):
-        observation = self.env.reset()
-        self.observation_buffer.clear()
-        self.observation_buffer.append(observation)
-        return observation
+        return observation, float(r_norm), terminated, truncated, info
 
 # Collect trajectories with a policy     
-def collect_trajectories(env, epochs=200, max_len=500):
+def collect_trajectories(env, epochs=150, max_len=500):
     trajectories = []
 
     for epoch in range(epochs):
@@ -178,6 +180,3 @@ def train_reward_model(model, pairs, epochs, batch_size, lr=1e-3):
             losses.append(loss.item())
 
         print(f"Epoch {epoch+1}/{epochs}, Loss: {np.mean(losses):.4f}")
-
-if __name__ == "__main__":
-    pass
