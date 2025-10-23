@@ -43,7 +43,7 @@ def run_ppo_demo(hidden_dim,num_episodes, clip_ratio, lr, gamma, lam, render_mod
     max_reward = 0
     max_episode = 0
     for ep in range(num_episodes):
-        state, _ = env.reset()
+        state = env.reset()
         done = False
         total_reward = 0
 
@@ -69,7 +69,7 @@ def run_ppo_demo(hidden_dim,num_episodes, clip_ratio, lr, gamma, lam, render_mod
             state = next_state
             total_reward += reward
 
-            if done or truncated:
+            if done:
                 break
 
         if total_reward > max_reward:
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     lam = 0.95
 
     # Run standard PPO
-    # run_ppo_demo(hidden_dim, num_episodes, clip_ratio, lr, gamma, lam)
+    run_ppo_demo(hidden_dim, num_episodes, clip_ratio, lr, gamma, lam)
 
     # Run RLHF PPO
-    run_rlhf_ppo_demo()
+    # run_rlhf_ppo_demo()
