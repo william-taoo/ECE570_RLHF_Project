@@ -89,6 +89,7 @@ class PPO:
         for _ in range(epochs):
             indices = np.arange(dataset_size)
             np.random.shuffle(indices)
+            losses = []
 
             for start in range(0, dataset_size, batch_size):
                 end = start + batch_size
@@ -129,3 +130,6 @@ class PPO:
                 torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
 
                 self.optimizer.step()
+                losses.append(loss.item())
+
+        return losses

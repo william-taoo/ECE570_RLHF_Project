@@ -15,12 +15,23 @@ from models.rlhf_ppo import (
 )
 from stable_baselines3 import PPO as SB3PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
+import matplotlib as plt
 
 
 def print_results(type, num_episodes, avg_reward, max_reward, max_episode):
     print(f"\n=== {type} Results ===")
     print(f"Average reward over {num_episodes} episodes: {avg_reward:.2f}")
     print(f"Max reward of {max_reward} at episode {max_episode}")
+
+def plot_loss(losses, model_type):
+    plt.figure(figsize=(6,4))
+    plt.plot(losses)
+    plt.title(f"{model_type} Training Loss")
+    plt.xlabel("Training Step")
+    plt.ylabel("Loss")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
 def run_ppo_demo(hidden_dim,num_episodes, clip_ratio, lr, gamma, lam, render_mode=None):
     print("\n=== Standard PPO Demo ===")
@@ -85,7 +96,7 @@ def run_ppo_demo(hidden_dim,num_episodes, clip_ratio, lr, gamma, lam, render_mod
         np_log_probs = np.array(all_log_probs)
 
         # Update policy
-        agent.update(np_states, np_actions, np_log_probs, returns, advantages, epochs=10, batch_size=64)
+        loss = agent.update(np_states, np_actions, np_log_probs, returns, advantages, epochs=10, batch_size=64)
 
         # Clear
         all_states.clear()
@@ -104,6 +115,9 @@ def run_ppo_demo(hidden_dim,num_episodes, clip_ratio, lr, gamma, lam, render_mod
     avg_reward = np.mean(episode_rewards)
     print_results("Standard PPO", num_episodes, avg_reward, max_reward, max_episode)
 
+    # 5. Plot loss
+    plot_loss(loss, "PPO")
+
     return avg_reward
 
 def run_rlhf_ppo_demo(render_mode=None):
@@ -119,7 +133,7 @@ def run_rlhf_ppo_demo(render_mode=None):
 
     observation_dim = env.env.observation_space.shape[0]
     reward_model = RewardModel(observation_dim)
-    train_reward_model(reward_model, pairs, epochs=15, batch_size=32)
+    loss = train_reward_model(reward_model, pairs, epochs=15, batch_size=32)
 
     def make_wrapped_env():
         base_env = gym.make("CartPole-v1")
@@ -151,6 +165,9 @@ def run_rlhf_ppo_demo(render_mode=None):
 
     avg_reward = np.mean(episode_rewards)
     print_results("RLHF PPO", num_episodes, avg_reward, max_reward, max_episode)
+
+    # Plot loss
+    plot_loss(loss, "RLHF PPO")
 
     return avg_reward
 

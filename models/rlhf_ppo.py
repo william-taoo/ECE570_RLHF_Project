@@ -4,7 +4,7 @@ import torch.optim as optim
 import numpy as np
 import random
 import gymnasium as gym
-from collections import deque, namedtuple
+from collections import deque
 
 SEGMENT_LENGTH = 20 # Length of trajectory segment
 PREF_PAIRS = 2000 # Number of preference pairs used to train
@@ -180,3 +180,5 @@ def train_reward_model(model, pairs, epochs, batch_size, lr=1e-3):
             losses.append(loss.item())
 
         print(f"Epoch {epoch+1}/{epochs}, Loss: {np.mean(losses):.4f}")
+
+    return losses
