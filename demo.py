@@ -15,7 +15,7 @@ from models.rlhf_ppo import (
 )
 from stable_baselines3 import PPO as SB3PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 
 def print_results(type, num_episodes, avg_reward, max_reward, max_episode):
