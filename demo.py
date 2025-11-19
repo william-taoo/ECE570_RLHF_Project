@@ -23,6 +23,8 @@ def print_results(type, num_episodes, avg_reward, max_reward, max_episode):
     print(f"Max reward of {max_reward} at episode {max_episode}")
 
 def run_ppo_demo(hidden_dim,num_episodes, clip_ratio, lr, gamma, lam, render_mode=None):
+    print("\n=== Standard PPO Demo ===")
+
     # 1. Initialize environment
     env = CartPoleEnv(render_mode=render_mode)
     state_dim = env.env.observation_space.shape[0]
@@ -102,9 +104,12 @@ def run_ppo_demo(hidden_dim,num_episodes, clip_ratio, lr, gamma, lam, render_mod
     avg_reward = np.mean(episode_rewards)
     print_results("Standard PPO", num_episodes, avg_reward, max_reward, max_episode)
 
+    return avg_reward
+
 def run_rlhf_ppo_demo(render_mode=None):
     env = CartPoleEnv(render_mode=render_mode)
 
+    print("\n=== RLHF PPO Demo ===")
     print(f"Collecting trajectories...")
     trajs = collect_trajectories(env, num_episodes)
     segments = trajectory_to_segments(trajs)
@@ -143,9 +148,11 @@ def run_rlhf_ppo_demo(render_mode=None):
             max_episode = ep
 
         episode_rewards.append(total_reward)
-    avg_reward = np.mean(episode_rewards)
 
+    avg_reward = np.mean(episode_rewards)
     print_results("RLHF PPO", num_episodes, avg_reward, max_reward, max_episode)
+
+    return avg_reward
 
 
 if __name__ == "__main__":
@@ -157,7 +164,15 @@ if __name__ == "__main__":
     lam = 0.95
 
     # Run standard PPO
-    run_ppo_demo(hidden_dim, num_episodes, clip_ratio, lr, gamma, lam)
+    ppo_average = []
+    for i in range(5):
+        ppo_average.append(run_ppo_demo(hidden_dim, num_episodes, clip_ratio, lr, gamma, lam))
+    print(ppo_average)
+    print(f"Average PPO reward over 5 runs: {np.mean(ppo_average)}")
 
     # Run RLHF PPO
-    # run_rlhf_ppo_demo()
+    rlhf_ppo_average = []
+    for i in range(5):
+        rlhf_ppo_average.append(run_rlhf_ppo_demo())
+    print(rlhf_ppo_average)
+    print(f"Average RLHF PPO reward over 5 runs: {np.mean(rlhf_ppo_average)}")

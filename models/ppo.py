@@ -101,7 +101,10 @@ class PPO:
                 advantages_batch = advantages[batch_index]
 
                 # Normalize for stability
-                advantages_batch = (advantages_batch - advantages_batch.mean()) / (advantages_batch.std() + 1e-8)
+                if advantages_batch.numel() > 1:
+                    advantages_batch = (advantages_batch - advantages_batch.mean()) / (advantages_batch.std() + 1e-8)
+                else:
+                    advantages_batch = advantages_batch * 0
 
                 # Forward pass (use logits for numeric stability)
                 logits, values = self.policy(state_batch)
