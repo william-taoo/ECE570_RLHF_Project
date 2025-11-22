@@ -23,7 +23,7 @@ def print_results(type, num_episodes, avg_reward, max_reward, max_episode):
     print(f"Average reward over {num_episodes} episodes: {avg_reward:.2f}")
     print(f"Max reward of {max_reward} at episode {max_episode}")
 
-def plot_loss(losses, model_type):
+def plot_loss(losses, model_type, i):
     plt.figure(figsize=(6,4))
     plt.plot(losses)
     plt.title(f"{model_type} Training Loss")
@@ -31,9 +31,10 @@ def plot_loss(losses, model_type):
     plt.ylabel("Loss")
     plt.grid(True)
     plt.tight_layout()
-    plt.show()
+    # plt.show()
+    plt.savefig(f"{model_type}_loss_{i}.png")
 
-def run_ppo_demo(hidden_dim,num_episodes, clip_ratio, lr, gamma, lam, render_mode=None):
+def run_ppo_demo(hidden_dim,num_episodes, clip_ratio, lr, gamma, lam, run, render_mode=None):
     print("\n=== Standard PPO Demo ===")
 
     # 1. Initialize environment
@@ -116,11 +117,11 @@ def run_ppo_demo(hidden_dim,num_episodes, clip_ratio, lr, gamma, lam, render_mod
     print_results("Standard PPO", num_episodes, avg_reward, max_reward, max_episode)
 
     # 5. Plot loss
-    plot_loss(loss, "PPO")
+    plot_loss(loss, "PPO", run + 1)
 
     return avg_reward
 
-def run_rlhf_ppo_demo(render_mode=None):
+def run_rlhf_ppo_demo(run, render_mode=None):
     env = CartPoleEnv(render_mode=render_mode)
 
     print("\n=== RLHF PPO Demo ===")
@@ -167,7 +168,7 @@ def run_rlhf_ppo_demo(render_mode=None):
     print_results("RLHF PPO", num_episodes, avg_reward, max_reward, max_episode)
 
     # Plot loss
-    plot_loss(loss, "RLHF PPO")
+    plot_loss(loss, "RLHF PPO", run + 1)
 
     return avg_reward
 
@@ -183,13 +184,13 @@ if __name__ == "__main__":
     # Run standard PPO
     ppo_average = []
     for i in range(5):
-        ppo_average.append(run_ppo_demo(hidden_dim, num_episodes, clip_ratio, lr, gamma, lam))
+        ppo_average.append(run_ppo_demo(hidden_dim, num_episodes, clip_ratio, lr, gamma, lam, i))
     print(ppo_average)
     print(f"Average PPO reward over 5 runs: {np.mean(ppo_average)}")
 
     # Run RLHF PPO
     rlhf_ppo_average = []
     for i in range(5):
-        rlhf_ppo_average.append(run_rlhf_ppo_demo())
+        rlhf_ppo_average.append(run_rlhf_ppo_demo(i))
     print(rlhf_ppo_average)
     print(f"Average RLHF PPO reward over 5 runs: {np.mean(rlhf_ppo_average)}")

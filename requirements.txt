@@ -1,4 +1,6 @@
+ale-py
 gymnasium[classic-control]
+gymnasium[atari,accept-rom-license]
 torch
 numpy
 stable_baselines3
